@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MarkdownSettings">
+    <option name="customStylesheetPath" value="C:\Users\kisee\Documents\GitHub\narigp-farmer-impact-study\style.css" />
+    <option name="customStylesheetText" value="@import url('https://fonts.googleapis.com/css2?family=Sono:wght@300;400;500;600;700&amp;display=swap');&#10;@import url('https://fonts.googleapis.com/css2?family=Sono:wght@300;400;500;600;700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap');&#10;&#10;/* Sono or Space Mono */&#10;* {&#10;  font-family: 'Sono', monospace;&#10;}&#10;" />
+    <option name="useCustomStylesheetText" value="true" />
+  </component>
+</project>
