@@ -17,7 +17,7 @@ plot_style = 'seaborn-v0_8-paper'
 # plot_style = 'fivethirtyeight'
 
 plt.style.use(plot_style)
-plt.rcParams['grid.alpha'] = 0.25
+plt.rcParams['grid.alpha'] = 0.5
 plt.rcParams['font.family'] = font_family
 # plt.rcParams['font.size'] = font_size
 # plt.rcParams['axes.labelsize'] = font_size
@@ -31,7 +31,7 @@ plt.rcParams['axes.spines.right'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
 
 
-def engineer_change_features(dataframe: pd.DataFrame) -> pd.DataFrame:
+def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
     """Create features for the change in values over time.
 
     Parameters
@@ -54,6 +54,7 @@ def engineer_change_features(dataframe: pd.DataFrame) -> pd.DataFrame:
     >>> df = engineer_change_features(df)
 
     """
+    dataframe = df.copy()
 
     # Create a list of the columns to use
     for col in dataframe.columns:
@@ -70,8 +71,16 @@ def engineer_change_features(dataframe: pd.DataFrame) -> pd.DataFrame:
                 dataframe.insert(change_col_index, change_col, change_col_data)
     return dataframe
 
-def create_composite_feature(dataframe, features, new_feature_name,
-                             method='mean', weights=None, drop_features=False):
+
+ordinal_map = {'Strongly Agree': 5,
+               'Agree': 4,
+               'Neutral': 3,
+               'Disagree': 2,
+               'Strongly Disagree': 1}
+
+def create_composite_feature(df, features, new_feature_name,
+                             method='mean', weights=None, drop_features=False,
+                             ordinal_map=ordinal_map):
     """
     Create a composite feature from a list of features.
 
@@ -85,13 +94,23 @@ def create_composite_feature(dataframe, features, new_feature_name,
         The name of the new feature.
     drop_features : bool, default False
         Whether to drop the features used to create the new feature.
+    method : str, default 'mean'
+        The method to use to combine the features. Options are 'mean', 'sum',
+        'weighted_mean', 'weighted_sum', 'interaction', and 'pca'.
+    weights : list, default None
+        The weights to use for the weighted_mean and weighted_sum methods.
+    ordinal_map : dict, default None
+        The mapping to use for ordinal features.
 
     Returns
     -------
     dataframe : pandas.DataFrame
         The dataframe with the new feature added.
     """
-    dataframe = dataframe.copy()
+    dataframe = df.copy()
+
+    if ordinal_map is not None:
+        dataframe.replace(ordinal_map, inplace=True)
 
     if new_feature_name in dataframe.columns:
         raise ValueError(f'Feature {new_feature_name} already exists.')
@@ -130,7 +149,8 @@ def create_composite_feature(dataframe, features, new_feature_name,
 
     return dataframe
 
-def transform_features(dataframe, features,
+
+def transform_features(df, features,
                        treat_outliers='drop', treat_skewness=None):
     """
     Transform features in a dataframe.
@@ -154,7 +174,7 @@ def transform_features(dataframe, features,
     dataframe : pandas.DataFrame
         The dataframe with the transformed features.
     """
-    dataframe = dataframe.copy()
+    dataframe = df.copy()
 
     if not all(feature in dataframe.columns for feature in features):
         raise ValueError('Not all features in features exist in dataframe.')
