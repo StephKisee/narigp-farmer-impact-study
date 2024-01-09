@@ -72,11 +72,11 @@ def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
     return dataframe
 
 
-ordinal_map = {'Strongly Agree': 5,
-               'Agree': 4,
-               'Neutral': 3,
-               'Disagree': 2,
-               'Strongly Disagree': 1}
+ordinal_map = {'Strongly Agree': 2,
+               'Agree': 1,
+               'Neutral': 0,
+               'Disagree': -1,
+               'Strongly Disagree': -2}
 
 def create_composite_feature(df, features, new_feature_name,
                              method='mean', weights=None, drop_features=False,
@@ -107,16 +107,18 @@ def create_composite_feature(df, features, new_feature_name,
     dataframe : pandas.DataFrame
         The dataframe with the new feature added.
     """
-    dataframe = df.copy()
+    data = df.copy()
 
     if ordinal_map is not None:
-        dataframe.replace(ordinal_map, inplace=True)
+        dataframe = data.replace(ordinal_map)
+    else:
+        dataframe = data
 
-    if new_feature_name in dataframe.columns:
-        raise ValueError(f'Feature {new_feature_name} already exists.')
-
-    if not all(feature in dataframe.columns for feature in features):
-        raise ValueError('Not all features in features exist in dataframe.')
+    # if new_feature_name in dataframe.columns:
+    #     raise ValueError(f'Feature {new_feature_name} already exists.')
+    #
+    # if not all(feature in dataframe.columns for feature in features):
+    #     raise ValueError('Not all features in features exist in dataframe.')
 
     if method == 'mean':
         dataframe[new_feature_name] = dataframe[features].mean(axis=1)
