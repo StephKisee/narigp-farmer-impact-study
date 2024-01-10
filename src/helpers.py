@@ -122,32 +122,32 @@ def create_composite_feature(df, features, new_feature_name,
 
     if method == 'mean':
         dataframe[new_feature_name] = dataframe[features].mean(axis=1)
-
-    elif method == 'sum':
-        dataframe[new_feature_name] = dataframe[features].sum(axis=1)
-
-    elif method == 'weighted_mean':
-        if weights is None:
-            raise ValueError('Weights must be provided for weighted_mean method.')
-        dataframe[new_feature_name] = np.average(dataframe[features], axis=1, weights=weights)
-
-    elif method == 'weighted_sum':
-        if weights is None:
-            raise ValueError('Weights must be provided for weighted_sum method.')
-        dataframe[new_feature_name] = np.dot(dataframe[features], weights)
-
-    elif method == 'interaction':
-        dataframe[new_feature_name] = dataframe[features].prod(axis=1)
-
-    elif method == 'pca':
-        dataframe[features] = StandardScaler().fit_transform(dataframe[features])
-
-        pca = PCA(n_components=1)
-
-        dataframe[new_feature_name] = pca.fit_transform(dataframe[features])
-
-    if drop_features:
-        dataframe.drop(columns=features, inplace=True)
+    #
+    # elif method == 'sum':
+    #     dataframe[new_feature_name] = dataframe[features].sum(axis=1)
+    #
+    # elif method == 'weighted_mean':
+    #     if weights is None:
+    #         raise ValueError('Weights must be provided for weighted_mean method.')
+    #     dataframe[new_feature_name] = np.average(dataframe[features], axis=1, weights=weights)
+    #
+    # elif method == 'weighted_sum':
+    #     if weights is None:
+    #         raise ValueError('Weights must be provided for weighted_sum method.')
+    #     dataframe[new_feature_name] = np.dot(dataframe[features], weights)
+    #
+    # elif method == 'interaction':
+    #     dataframe[new_feature_name] = dataframe[features].prod(axis=1)
+    #
+    # elif method == 'pca':
+    #     dataframe[features] = StandardScaler().fit_transform(dataframe[features])
+    #
+    #     pca = PCA(n_components=1)
+    #
+    #     dataframe[new_feature_name] = pca.fit_transform(dataframe[features])
+    #
+    # if drop_features:
+    #     dataframe.drop(columns=features, inplace=True)
 
     return dataframe
 
