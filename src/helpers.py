@@ -5,6 +5,14 @@ import pandas as pd
 import scipy.stats as stats
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import ttest_ind, f_oneway
+import pingouin as pg
+import seaborn as sns
+import statsmodels.api as sm
+from factor_analyzer import FactorAnalyzer
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.stats.diagnostic import het_breuschpagan
+import geopandas as gpd
 
 fonts = fm.findSystemFonts()
 
@@ -29,6 +37,18 @@ plt.rcParams['font.family'] = font_family
 plt.rcParams['axes.spines.top'] = True
 plt.rcParams['axes.spines.right'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
+
+ordinal_map = {'Strongly Agree': 2,
+               'Agree': 1,
+               'Neutral': 0,
+               'Disagree': -1,
+               'Strongly Disagree': -2}
+
+replace_map = {'Diasgree': 'Disagree',
+               'Kako': 'Waia/Kako',
+               'Mtito': 'Mtito Andei'}
+
+reverse_map = {v: k for k, v in ordinal_map.items()}
 
 
 def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -71,12 +91,6 @@ def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
                 dataframe.insert(change_col_index, change_col, change_col_data)
     return dataframe
 
-
-ordinal_map = {'Strongly Agree': 2,
-               'Agree': 1,
-               'Neutral': 0,
-               'Disagree': -1,
-               'Strongly Disagree': -2}
 
 def create_composite_feature(df, features, new_feature_name,
                              method='mean', weights=None, drop_features=False,
@@ -224,3 +238,123 @@ def transform_features(df, features,
                 dataframe[f'{feature} (boxcox)'] = stats.boxcox(dataframe[feature] + const)[0]
 
     return dataframe
+
+
+def create_technology_features(df):
+    dataframe = df.copy()
+
+    technology_cols = [col for col in dataframe.columns if col.startswith('trained') or col.startswith('adopted')]
+
+    for col in dataframe.columns:
+
+        if col in technology_cols:
+            technology_col = col.split('_', 1)[1]
+            trained_col = 'trained_' + technology_col
+            adopted_col = 'adopted_' + technology_col
+
+            if col.startswith('trained'):
+                dataframe.loc[:, trained_col] = dataframe[trained_col].replace({'Yes': 'Trained', 'No': 'Not Trained'})
+            elif col.startswith('adopted'):
+                dataframe.loc[:, adopted_col] = dataframe[adopted_col].replace({'Yes': 'Adopted', 'No': 'Not Adopted'})
+
+    dataframe = dataframe.melt(id_vars=[col for col in dataframe.columns if col not in technology_cols],
+                               value_vars=technology_cols, var_name='Technology', value_name='Status')
+
+    dataframe.loc[:, 'Technology'] = dataframe['Technology'].apply(lambda x: x.split('_', 1)[1].replace('_', ' ').title())
+
+    return dataframe
+
+
+def calculate_percentages(df):
+
+    df = df.div(df.sum(axis=1), axis=0) * 100
+    columns = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
+    df = df.reindex(columns=columns, fill_value=0)
+    df = df.round(2)
+    return df
+
+
+def bar_plot(df, ax, palette=None):
+    """
+    Plot a stacked bar plot.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The dataframe containing the data to plot.
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
+    palette : list, default None
+        The color palette to use.
+    """
+    if palette is None:
+        palette = sns.color_palette('Spectral', 5)
+        palette.reverse()
+    # Add annotations
+    ax.barh(df.index, df['Strongly Disagree'], color=palette[4], label='Strongly Disagree')
+    # Annotate Strongly Disagree
+    for i, v in enumerate(df['Strongly Disagree']):
+        if v > 0:
+            ax.text(v + 0.5, i - 0.1, f"{v:.1f}%", color='black', fontsize=6)
+    ax.barh(df.index, df['Disagree'], left=df['Strongly Disagree'], color=palette[3], label='Disagree')
+    for i, v in enumerate(df['Disagree']):
+        if v > 0:
+            ax.text(v + df['Strongly Disagree'][i] + 0.5, i - 0.1, f"{v:.1f}%", color='black', fontsize=6)
+    ax.barh(df.index, df['Neutral'], left=df['Strongly Disagree'] + df['Disagree'], color=palette[2], label='Neutral')
+    for i, v in enumerate(df['Neutral']):
+        if v > 0:
+            ax.text(v + df['Strongly Disagree'][i] + df['Disagree'][i] + 0.5, i - 0.1, f"{v:.1f}%", color='black', fontsize=6)
+    ax.barh(df.index, df['Agree'], left=df['Strongly Disagree'] + df['Disagree'] + df['Neutral'], color=palette[1], label='Agree')
+    for i, v in enumerate(df['Agree']):
+        if v > 0:
+            ax.text(v + df['Strongly Disagree'][i] + df['Disagree'][i] + df['Neutral'][i] + 0.5, i - 0.1, f"{v:.1f}%", color='black', fontsize=6)
+    ax.barh(df.index, df['Strongly Agree'], left=df['Strongly Disagree'] + df['Disagree'] + df['Neutral'] + df['Agree'], color=palette[0], label='Strongly Agree')
+    for i, v in enumerate(df['Strongly Agree']):
+        if v > 0:
+            ax.text(v + df['Strongly Disagree'][i] + df['Disagree'][i] + df['Neutral'][i] + df['Agree'][i] + 0.5, i - 0.1, f"{v:.1f}%", color='black', fontsize=6)
+
+    ax.set_xlim(0, 100)
+    ax.set_xticks(np.arange(0, 101, 25))
+    ax.set_xticklabels(np.arange(0, 101, 25))
+    ax.set_xlabel('Relative Proportion (%)')
+    ax.set_ylabel('')
+    ax.legend(loc='lower center', ncol=5, bbox_to_anchor=(0.5, -0.275),
+              facecolor='gray', framealpha=0.05)
+
+    return ax
+
+
+def conduct_hypothesis_test(df, column):
+
+    for col in df.select_dtypes('category').columns:
+        unique_values = df[col].unique()
+
+        # Perform t-test if there are two unique values
+        if len(unique_values) == 2:
+            group1 = df[df[col] == unique_values[0]][column]
+            group2 = df[df[col] == unique_values[1]][column]
+            t_stat, p_value = ttest_ind(group1, group2, equal_var=False)
+            print(f"T-Test for {col}: p-value = {p_value:.4f}")
+
+        # Perform ANOVA if there are more than two unique values
+        elif len(unique_values) > 2:
+            model = pg.anova(data=df, dv=column, between=col)
+            display(model)
+            if model['p-unc'][0] < 0.05:
+                print(f"ANOVA for {col}: p-value = {model['p-unc'][0]:.4f}")
+
+
+def filter_outliers(dataframe: pd.DataFrame, columns: list):
+
+    for col in columns:
+
+        mean = dataframe[col].mean()
+        std = dataframe[col].std()
+        limit = std * 3
+
+        lower, upper = (mean - limit), (mean + limit)
+
+        dataframe = dataframe[(dataframe[col] > lower) &
+                              (dataframe[col] < upper)]
+
+        return dataframe
