@@ -333,15 +333,33 @@ def conduct_hypothesis_test(df, column):
         if len(unique_values) == 2:
             group1 = df[df[col] == unique_values[0]][column]
             group2 = df[df[col] == unique_values[1]][column]
-            t_stat, p_value = ttest_ind(group1, group2, equal_var=False)
-            print(f"T-Test for {col}: p-value = {p_value:.4f}")
+            t_stat, p_value = ttest_ind(group1, group2)
+            # display(ttest_ind(group1, group2))
+            print(f"T-Test for {col}")
+            print(f"-----------{'-' * len(col)}")
+            print("H0: The means of the two groups are equal.")
+            print("H1: The means of the two groups are not equal.\n")
+            print(f"t-statistic (333) = {t_stat:.4f}")
+            print(f"p-value = {p_value:.4f}\n")
+            if p_value < 0.05:
+                print(f"Reject H0. The means of the two groups are not equal.\n")
+            else:
+                print(f"Fail to reject H0. The means of the two groups are equal.\n")
 
         # Perform ANOVA if there are more than two unique values
         elif len(unique_values) > 2:
             model = pg.anova(data=df, dv=column, between=col)
-            display(model)
+            # display(model)
+            print(f"ANOVA for {col}")
+            print(f"----------{'-' * len(col)}")
+            print("H0: The means of the groups are equal.")
+            print("H1: The means of the groups are not equal.\n")
+            print(f"F-statistic ({model['ddof1'][0]}, {model['ddof2'][0]}) = {model['F'][0]:.4f}")
+            print(f"p-value = {model['p-unc'][0]:.4f}\n")
             if model['p-unc'][0] < 0.05:
-                print(f"ANOVA for {col}: p-value = {model['p-unc'][0]:.4f}")
+                print(f"Reject H0: The means of the groups are not equal.\n")
+            else:
+                print(f"Fail to reject H0: The means of the groups are equal.\n")
 
 
 def filter_outliers(dataframe: pd.DataFrame, columns: list):
