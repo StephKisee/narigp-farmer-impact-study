@@ -241,51 +241,103 @@ def transform_features(df, features,
 
 
 def create_technology_features(df):
+    """
+    This function creates technology features from a given dataframe. It specifically looks for columns that start with 'trained' or 'adopted' and creates new columns based on these. The new columns are then used to create a melted dataframe with 'Technology' and 'Status' as the variable and value columns respectively.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input dataframe.
+
+    Returns
+    -------
+    dataframe : pandas.DataFrame
+        The dataframe with the new technology features added.
+    """
+    # Create a copy of the dataframe to avoid modifying the original one
     dataframe = df.copy()
 
+    # Identify the technology columns (those that start with 'trained' or 'adopted')
     technology_cols = [col for col in dataframe.columns if col.startswith('trained') or col.startswith('adopted')]
 
+    # Iterate over the dataframe columns
     for col in dataframe.columns:
 
+        # If the column is a technology column
         if col in technology_cols:
+            # Split the column name to get the technology name
             technology_col = col.split('_', 1)[1]
+            # Create the column names for 'trained' and 'adopted'
             trained_col = 'trained_' + technology_col
             adopted_col = 'adopted_' + technology_col
 
+            # If the column starts with 'trained', replace 'Yes' with 'Trained' and 'No' with 'Not Trained'
             if col.startswith('trained'):
                 dataframe.loc[:, trained_col] = dataframe[trained_col].replace({'Yes': 'Trained', 'No': 'Not Trained'})
+            # If the column starts with 'adopted', replace 'Yes' with 'Adopted' and 'No' with 'Not Adopted'
             elif col.startswith('adopted'):
                 dataframe.loc[:, adopted_col] = dataframe[adopted_col].replace({'Yes': 'Adopted', 'No': 'Not Adopted'})
 
+    # Melt the dataframe to create a long format dataframe with 'Technology' and 'Status' columns
     dataframe = dataframe.melt(id_vars=[col for col in dataframe.columns if col not in technology_cols],
                                value_vars=technology_cols, var_name='Technology', value_name='Status')
 
+    # Clean up the 'Technology' column by splitting on underscore and replacing it with a space
     dataframe.loc[:, 'Technology'] = dataframe['Technology'].apply(lambda x: x.split('_', 1)[1].replace('_', ' ').title())
 
     return dataframe
 
 
 def calculate_percentages(df):
+    """
+    This function calculates the relative proportions of each category in a dataframe and returns the dataframe with the proportions expressed as percentages.
 
+    The function assumes that the dataframe contains categorical data with the following categories: 'Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input dataframe.
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        The dataframe with the relative proportions of each category expressed as percentages.
+    """
+    # Divide each value in the dataframe by the sum of the row it belongs to and multiply by 100 to get percentages
     df = df.div(df.sum(axis=1), axis=0) * 100
+
+    # Define the order of the columns
     columns = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
+
+    # Reindex the dataframe to match the order of the columns and fill missing values with 0
     df = df.reindex(columns=columns, fill_value=0)
+
+    # Round the values in the dataframe to 2 decimal places
     df = df.round(2)
+
     return df
 
 
 def bar_plot(df, ax, palette=None):
     """
-    Plot a stacked bar plot.
+    This function plots a stacked bar plot of the relative proportions of each category in a dataframe.
+
+    The function assumes that the dataframe contains categorical data with the following categories: 'Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'. Each category is represented by a different color in the bar plot.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The dataframe containing the data to plot.
+        The input dataframe. It should contain the relative proportions of each category expressed as percentages.
     ax : matplotlib.axes.Axes
-        The axes to plot on.
-    palette : list, default None
-        The color palette to use.
+        The axes object to draw the plot onto.
+    palette : list, optional
+        The color palette to use for the different categories. If None, the 'Spectral' color palette from seaborn is used.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes object with the bar plot drawn onto it.
     """
     if palette is None:
         palette = sns.color_palette('Spectral', 5)
@@ -325,7 +377,22 @@ def bar_plot(df, ax, palette=None):
 
 
 def conduct_hypothesis_test(df, column):
+    """
+    This function conducts a hypothesis test on a given dataframe and column. It performs a t-test if there are two unique values in the column, and an ANOVA if there are more than two unique values.
 
+    The function assumes that the dataframe contains categorical data.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input dataframe.
+    column : str
+        The column to conduct the hypothesis test on.
+
+    Returns
+    -------
+    None
+    """
     for col in df.select_dtypes('category').columns:
         unique_values = df[col].unique()
 
@@ -334,7 +401,6 @@ def conduct_hypothesis_test(df, column):
             group1 = df[df[col] == unique_values[0]][column]
             group2 = df[df[col] == unique_values[1]][column]
             t_stat, p_value = ttest_ind(group1, group2)
-            # display(ttest_ind(group1, group2))
             print(f"T-Test for {col}")
             print(f"-----------{'-' * len(col)}")
             print("H0: The means of the two groups are equal.")
@@ -349,7 +415,6 @@ def conduct_hypothesis_test(df, column):
         # Perform ANOVA if there are more than two unique values
         elif len(unique_values) > 2:
             model = pg.anova(data=df, dv=column, between=col)
-            # display(model)
             print(f"ANOVA for {col}")
             print(f"----------{'-' * len(col)}")
             print("H0: The means of the groups are equal.")
@@ -363,16 +428,35 @@ def conduct_hypothesis_test(df, column):
 
 
 def filter_outliers(dataframe: pd.DataFrame, columns: list):
+    """
+    This function filters outliers from the specified columns of a dataframe.
 
+    Outliers are defined as values that are more than three standard deviations away from the mean. The function calculates the mean and standard deviation for each specified column, and then removes rows where the column value is an outlier.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        The input dataframe from which outliers are to be removed.
+    columns : list
+        The list of column names to check for outliers.
+
+    Returns
+    -------
+    dataframe : pandas.DataFrame
+        The dataframe with outliers removed.
+    """
     for col in columns:
-
+        # Calculate the mean and standard deviation of the column
         mean = dataframe[col].mean()
         std = dataframe[col].std()
+
+        # Define the limit for outlier detection as three standard deviations from the mean
         limit = std * 3
 
+        # Calculate the lower and upper bounds for outlier detection
         lower, upper = (mean - limit), (mean + limit)
 
-        dataframe = dataframe[(dataframe[col] > lower) &
-                              (dataframe[col] < upper)]
+        # Filter the dataframe to remove outliers
+        dataframe = dataframe[(dataframe[col] > lower) & (dataframe[col] < upper)]
 
-        return dataframe
+    return dataframe
