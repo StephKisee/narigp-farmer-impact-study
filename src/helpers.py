@@ -1,3 +1,5 @@
+from types import MappingProxyType
+
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,6 +15,7 @@ from factor_analyzer import FactorAnalyzer
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.stats.diagnostic import het_breuschpagan
 import geopandas as gpd
+from scipy.stats import shapiro
 
 fonts = fm.findSystemFonts()
 
@@ -38,17 +41,17 @@ plt.rcParams['axes.spines.top'] = True
 plt.rcParams['axes.spines.right'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
 
-ordinal_map = {'Strongly Agree': 2,
+ordinal_map = MappingProxyType({'Strongly Agree': 2,
                'Agree': 1,
                'Neutral': 0,
                'Disagree': -1,
-               'Strongly Disagree': -2}
+               'Strongly Disagree': -2})
 
-replace_map = {'Diasgree': 'Disagree',
+replace_map = MappingProxyType({'Diasgree': 'Disagree',
                'Kako': 'Waia/Kako',
-               'Mtito': 'Mtito Andei'}
+               'Mtito': 'Mtito Andei'})
 
-reverse_map = {v: k for k, v in ordinal_map.items()}
+reverse_map = MappingProxyType({v: k for k, v in ordinal_map.items()})
 
 
 def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -460,3 +463,82 @@ def filter_outliers(dataframe: pd.DataFrame, columns: list):
         dataframe = dataframe[(dataframe[col] > lower) & (dataframe[col] < upper)]
 
     return dataframe
+
+
+def transform_skewed_features(dataframe: pd.DataFrame, columns: list):
+    """
+    This function transforms skewed features in a dataframe.
+
+    The function assumes that the dataframe contains numerical features with skewed distributions. It transforms the features using the log transformation.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        The input dataframe containing the skewed features.
+    columns : list
+        The list of column names to transform.
+
+    Returns
+    -------
+    dataframe : pandas.DataFrame
+        The dataframe with the skewed features transformed.
+    """
+    for col in columns:
+        # Transform the feature using the log transformation
+        dataframe[col] = np.log(dataframe[col])
+
+    return dataframe
+
+
+def plot_distribution(dataframe: pd.DataFrame,
+                      feature: str,
+                      by: str = None,
+                      histyle: str = 'dodge',
+                      violin: bool = False,
+                      fh: int = 4,
+                      hr: int = 1,
+                      log: bool = False,
+                      **kwargs):
+    """
+    This function plots the distribution of a specified numerical feature in a dataframe.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        The input dataframe containing the feature to plot.
+    feature : str
+        The name of the feature to plot.
+    by : str, optional
+        The name of the column to group the data by. The default is None.
+    histyle : str, optional
+        The style of the histogram. The default is 'dodge'.
+    violin : bool, optional
+        Whether to plot a violin plot. The default is False.
+    kde : bool, optional
+        Whether to plot a kernel density estimate plot. The default is True.
+    fh : int, optional
+        The height of the figure. The default is 4.
+    hr : int, optional
+        The height ratio of the subplots. The default is 1.
+    log : bool, optional
+        Whether to plot the y-axis on a log scale. The default is False.
+    **kwargs : dict, optional
+        Additional keyword arguments to pass to the seaborn plotting functions.
+
+    Examples
+    --------
+    >>> plot_distribution()
+    """
+    fig, ax = plt.subplots(2, 1, figsize=(6, fh),
+                           gridspec_kw={'height_ratios': [7.5, hr]},
+                           sharex=True)
+    sns.histplot(data=dataframe, x=feature, hue=by, multiple=histyle, ax=ax[0], shrink=0.8, log_scale=log, **kwargs)
+
+    if violin:
+        sns.violinplot(data=dataframe, x=feature, y=by, ax=ax[1], **kwargs)
+    else:
+        sns.boxplot(data=dataframe, x=feature, y=by, ax=ax[1], width=0.5, **kwargs)
+    ax[1].set_ylabel('')
+    ax[1].set_xlabel(feature.replace('_', ' ').title())
+
+    return fig, ax
