@@ -41,11 +41,17 @@ plt.rcParams['axes.spines.top'] = True
 plt.rcParams['axes.spines.right'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
 
-ordinal_map = MappingProxyType({'Strongly Agree': 2,
-               'Agree': 1,
-               'Neutral': 0,
-               'Disagree': -1,
-               'Strongly Disagree': -2})
+# ordinal_map = MappingProxyType({'Strongly Agree': 2,
+#                'Agree': 1,
+#                'Neutral': 0,
+#                'Disagree': -1,
+#                'Strongly Disagree': -2})
+
+ordinal_map = MappingProxyType({'Strongly Agree': 5,
+                                'Agree': 4,
+                                'Neutral': 3,
+                                'Disagree': 2,
+                                'Strongly Disagree': 1})
 
 replace_map = MappingProxyType({'Diasgree': 'Disagree',
                'Kako': 'Waia/Kako',
