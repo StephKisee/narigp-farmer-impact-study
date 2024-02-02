@@ -421,6 +421,15 @@ def conduct_hypothesis_test(df, column):
             print(f"-----------{'-' * len(col)}")
             print("H0: The means of the two groups are equal.")
             print("H1: The means of the two groups are not equal.\n")
+
+            display(ttest_ind(group1, group2))
+
+        # # Display the table of results
+            display(pd.DataFrame({'Group 1': [group1.mean(), group1.std(), group1.count()],
+                                    'Group 2': [group2.mean(), group2.std(), group2.count()],
+                                    'Difference': [group1.mean() - group2.mean(), np.nan, np.nan]},
+                                     index=['Mean', 'Standard Deviation', 'Sample Size']))
+
             print(f"t-statistic (333) = {t_stat:.4f}")
             print(f"p-value = {p_value:.4f}\n")
             if p_value < 0.05:
@@ -435,10 +444,15 @@ def conduct_hypothesis_test(df, column):
             print(f"----------{'-' * len(col)}")
             print("H0: The means of the groups are equal.")
             print("H1: The means of the groups are not equal.\n")
+            display(model)
             print(f"F-statistic ({model['ddof1'][0]}, {model['ddof2'][0]}) = {model['F'][0]:.4f}")
             print(f"p-value = {model['p-unc'][0]:.4f}\n")
             if model['p-unc'][0] < 0.05:
                 print(f"Reject H0: The means of the groups are not equal.\n")
+                print(f"Post-hoc test for {col}")
+                print(f"------------------{'-' * len(col)}")
+                posthoc = pg.pairwise_tukey(data=df, dv=column, between=col)
+                display(posthoc)
             else:
                 print(f"Fail to reject H0: The means of the groups are equal.\n")
 
