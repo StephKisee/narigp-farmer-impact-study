@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.stats as stats
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import boxcox
 from scipy.stats import ttest_ind, f_oneway
 import pingouin as pg
 import seaborn as sns
@@ -24,19 +25,19 @@ for font in fonts:
 
 font_size = 11
 font_family = 'Times New Roman'
-plot_style = 'seaborn-v0_8-paper'
-# plot_style = 'fivethirtyeight'
+# plot_style = 'seaborn-v0_8-paper'
+plot_style = 'fivethirtyeight'
 
 plt.style.use(plot_style)
 plt.rcParams['grid.alpha'] = 0.5
 plt.rcParams['font.family'] = font_family
-# plt.rcParams['font.size'] = font_size
-# plt.rcParams['axes.labelsize'] = font_size
-# plt.rcParams['xtick.labelsize'] = font_size
-# plt.rcParams['ytick.labelsize'] = font_size
-# plt.rcParams['legend.fontsize'] = font_size
-# plt.rcParams['figure.titlesize'] = font_size
-# plt.rcParams['axes.titlesize'] = font_size + 1
+plt.rcParams['font.size'] = font_size
+plt.rcParams['axes.labelsize'] = font_size
+plt.rcParams['xtick.labelsize'] = font_size
+plt.rcParams['ytick.labelsize'] = font_size
+plt.rcParams['legend.fontsize'] = font_size
+plt.rcParams['figure.titlesize'] = font_size
+plt.rcParams['axes.titlesize'] = font_size + 1
 plt.rcParams['axes.spines.top'] = True
 plt.rcParams['axes.spines.right'] = True
 plt.rcParams['figure.constrained_layout.use'] = True
@@ -46,6 +47,12 @@ plt.rcParams['figure.constrained_layout.use'] = True
 #                'Neutral': 0,
 #                'Disagree': -1,
 #                'Strongly Disagree': -2})
+
+# ordinal_map = MappingProxyType({'Strongly Agree': 3,
+#                                 'Agree': 3,
+#                                 'Neutral': 2,
+#                                 'Disagree': 1,
+#                                 'Strongly Disagree': 1})
 
 ordinal_map = MappingProxyType({'Strongly Agree': 5,
                                 'Agree': 4,
@@ -102,7 +109,7 @@ def engineer_change_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_composite_feature(df, features, new_feature_name,
-                             method='mean', weights=None, drop_features=False,
+                             method='pca', weights=None, drop_features=False,
                              ordinal_map=ordinal_map):
     """
     Create a composite feature from a list of features.
@@ -143,8 +150,8 @@ def create_composite_feature(df, features, new_feature_name,
     # if not all(feature in dataframe.columns for feature in features):
     #     raise ValueError('Not all features in features exist in dataframe.')
 
-    if method == 'mean':
-        dataframe[new_feature_name] = dataframe[features].mean(axis=1)
+    # if method == 'mean':
+    #     dataframe[new_feature_name] = dataframe[features].mean(axis=1)
     #
     # elif method == 'sum':
     #     dataframe[new_feature_name] = dataframe[features].sum(axis=1)
@@ -162,12 +169,12 @@ def create_composite_feature(df, features, new_feature_name,
     # elif method == 'interaction':
     #     dataframe[new_feature_name] = dataframe[features].prod(axis=1)
     #
-    # elif method == 'pca':
-    #     dataframe[features] = StandardScaler().fit_transform(dataframe[features])
-    #
-    #     pca = PCA(n_components=1)
-    #
-    #     dataframe[new_feature_name] = pca.fit_transform(dataframe[features])
+    if method == 'pca':
+        dataframe[features] = StandardScaler().fit_transform(dataframe[features])
+
+        pca = PCA(n_components=1)
+
+        dataframe[new_feature_name] = pca.fit_transform(dataframe[features])
     #
     # if drop_features:
     #     dataframe.drop(columns=features, inplace=True)
